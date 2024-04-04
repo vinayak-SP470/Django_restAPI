@@ -15,3 +15,13 @@ class Employee(models.Model):
 
     def __str__(self):
         return self.name
+
+class APILog(models.Model):
+    endpoint = models.CharField(max_length=255)
+    request_data = models.TextField()
+    response_data = models.TextField()
+    status_code = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.endpoint} - {self.status_code}"
