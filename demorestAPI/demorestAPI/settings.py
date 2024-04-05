@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'apibackendapp',
+    'AppEcommerce',
     'rest_framework_swagger',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -138,10 +139,37 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# SWAGGER_SETTINGS = {
+#     'SECURITY_DEFINITIONS': {
+#         'Basic': {
+#             'type': 'basic'
+#         }
+#     }
+# }
+
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
-        'Basic': {
-            'type': 'basic'
-        }
-    }
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Should give token in this format "Bearer $token"',
+        },
+    },
 }
+
+AUTH_USER_MODEL = 'AppEcommerce.CustomUser'
+
+MEDIA_ROOT = os.path.join(BASE_DIR,'media')
+MEDIA_URL = '/media/'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
+
+# twilio
+
+TWILIO_ACCOUNT_SID = 'AC280b3c09f52e459c313696edd0fdd7d9'
+TWILIO_AUTH_TOKEN = 'ce944f4fa0d3b0a35118c773e628d9ef'

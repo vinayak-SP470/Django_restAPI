@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %} {% endblock %}</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    {% block style %}
+    <style>
+      body {
+  font-family: 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+<!--  background: #000;-->
+  color: #999;
+}
+
+    </style>
+    {% endblock %}
+</head>
+<body>
+
+    {% include 'navbar.html' %}
+
+        {% block body %} {% endblock %}
+
+    {% include 'footerbar.html' %}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

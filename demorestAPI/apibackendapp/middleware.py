@@ -1,6 +1,6 @@
 from .models import APILog
 from django.utils.deprecation import MiddlewareMixin
-
+from django.http import FileResponse
 def demo_middleware(get_response):
     def middleware(request):
         response = get_response(request)
@@ -18,14 +18,27 @@ class APILogMiddleware(MiddlewareMixin):
 
     def process_response(self, request, response):
         if hasattr(request, '_body'):
-            request_data = request._body.decode()
+            try:
+                request_data = request._body.decode('utf-8')
+            except UnicodeDecodeError:
+                request_data = '[Unable to decode request body]'
+
+            if isinstance(response, FileResponse):
+                response_data = '[File response content]'
+            else:
+                try:
+                    response_data = response.content.decode('utf-8')
+                except AttributeError:
+                    response_data = '[Unable to decode response content]'
+
             APILog.objects.create(
                 endpoint=request.path,
                 request_data=request_data,
-                response_data=response.content.decode(),
+                response_data=response_data,
                 status_code=response.status_code
             )
         return response
+
 
 
 # class APILogMiddleware(MiddlewareMixin):
