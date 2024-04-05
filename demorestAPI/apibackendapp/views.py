@@ -121,16 +121,16 @@ def get_session(request):
         return HttpResponse("User ID not found in session")
 
 # function to send otp message
-# def send_otp(request):
-#     otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-#     account_sid = settings.TWILIO_ACCOUNT_SID
-#     auth_token = settings.TWILIO_AUTH_TOKEN
-#
-#     client = Client(account_sid, auth_token)
-#
-#     message = client.messages.create(
-#         body=f'Your OTP is: {otp}',
-#         from_='+13346030803',
-#         to='+918129110726'
-#     )
-#     return JsonResponse({'message': 'OTP sent successfully', 'otp': otp, 'message_sid': message.sid})
+def send_otp(request):
+    otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    account_sid = settings.TWILIO_ACCOUNT_SID
+    auth_token = settings.TWILIO_AUTH_TOKEN
+
+    client = Client(account_sid, auth_token)
+
+    message = client.messages.create(
+        body=f'Your OTP is: {otp}',
+        from_='+13346030803',
+        to='+918129110726'
+    )
+    return JsonResponse({'message': 'OTP sent successfully', 'otp': otp, 'message_sid': message.sid})
