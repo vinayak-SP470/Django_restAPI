@@ -17,7 +17,7 @@ def user_signup(request):
         # print("-----user_reg_form.errors-----", user_reg_form.errors)
         if user_reg_form.is_valid():
             new_user = user_reg_form.save(commit=False)
-            new_user.set_password(user_reg_form.cleaned_data['password1'])
+            # new_user.set_password(user_reg_form.cleaned_data['password1'])
             new_user.save()
             return render(request,'home.html',{'user_reg_form':user_reg_form})
     else:

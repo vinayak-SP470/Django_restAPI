@@ -31,8 +31,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'apibackendapp',
     'AppEcommerce',
+    'apibackendapp',
     'rest_framework_swagger',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -172,4 +172,4 @@ REST_FRAMEWORK = {
 # twilio
 
 TWILIO_ACCOUNT_SID = 'AC280b3c09f52e459c313696edd0fdd7d9'
-TWILIO_AUTH_TOKEN = 'ce944f4fa0d3b0a35118c773e628d9ef'
+TWILIO_AUTH_TOKEN = '1f6f370a85299493267953dfdfff3604'
