@@ -1,8 +1,5 @@
-from django.shortcuts import render
-
 from .renderers import CustomJSONRenderer, ProductJSONRenderer
 from .serializers import EmployeeSerializer, ProductSerializer, CartItemSerializer
-from django.http import JsonResponse
 from .models import Employee
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from drf_yasg.utils import swagger_auto_schema
@@ -11,127 +8,20 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from .decorators import validate_required_fields
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 import random
 from django.http import JsonResponse
 from twilio.rest import Client
 from django.conf import settings
 from rest_framework.response import Response
 from AppEcommerce.models import Role, Product, Cart, CartItem
-from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth import authenticate, login
+import stripe
+from rest_framework.views import APIView
 
-
-
-# from ..AppEcommerce.models import Product
-
-
-# @api_view(['GET'])
-# @csrf_exempt
-# @permission_classes([IsAuthenticated])
-# def hello_world(request):
-#     # request._logging_enabled = True
-#     return Response({'message': 'hai user'})
-
-#
-# @swagger_auto_schema(
-#     method='post',
-#     operation_description="Add new employee",
-#     request_body=openapi.Schema(
-#         type=openapi.TYPE_OBJECT,
-#         required=['name', 'empid', 'designation', 'email'],
-#         properties={
-#             'name': openapi.Schema(type=openapi.TYPE_STRING, description='Employee name'),
-#             'empid': openapi.Schema(type=openapi.TYPE_STRING, description='Employee ID'),
-#             'designation': openapi.Schema(type=openapi.TYPE_INTEGER, description='Employee designation ID'),
-#             'phonenumber': openapi.Schema(type=openapi.TYPE_STRING, description='Employee phone number', nullable=True),
-#             'email': openapi.Schema(type=openapi.TYPE_STRING, description='Employee email'),
-#         }
-#     ),
-#     responses={201: openapi.Response("Employee added", EmployeeSerializer())}
-# )
-# @swagger_auto_schema(
-#     method='delete',
-#     operation_description="Delete an employee by ID",
-#     manual_parameters=[
-#         openapi.Parameter(
-#             name='id',
-#             in_=openapi.IN_QUERY,
-#             type=openapi.TYPE_INTEGER,
-#             description='ID of the employee to delete',
-#             required=True,
-#         ),
-#     ],
-#     responses={
-#         status.HTTP_204_NO_CONTENT: 'Employee deleted successfully',
-#         status.HTTP_400_BAD_REQUEST: 'Bad request (e.g., missing ID)',
-#         status.HTTP_404_NOT_FOUND: 'Employee not found',
-#     }
-# )
-
-# Inbuilt decorator use
-@csrf_exempt
-# @api_view(['GET', 'POST', 'DELETE'])
-@validate_required_fields(['name', 'empid', 'designation', 'email'])
-# @permission_classes([IsAuthenticated])
-@renderer_classes([CustomJSONRenderer])
-def employee_list(request):
-    if request.method == 'GET':
-        if not request.user.is_authenticated:
-            return Response({'message': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
-        else:
-            employee_list = Employee.objects.all()
-            employee_list_serializer = EmployeeSerializer(employee_list, many=True)
-            return Response({'data': employee_list_serializer.data}, status=status.HTTP_200_OK)
-    elif request.method == 'POST':
-        employee_add_serializer = EmployeeSerializer(data=request.data)
-        if employee_add_serializer.is_valid():
-            employee_add_serializer.save()
-            return JsonResponse(employee_add_serializer.data, status=201)
-        return JsonResponse(employee_add_serializer.errors, status=400)
-    elif request.method == 'PUT':
-        try:
-            employee_instance = Employee.objects.get(id=request.data.get('id'))
-        except Employee.DoesNotExist:
-            return JsonResponse({'error': 'Employee not found'}, status=404)
-
-        employee_update_serializer = EmployeeSerializer(employee_instance, data=request.data)
-        if employee_update_serializer.is_valid():
-            employee_update_serializer.save()
-            return JsonResponse(employee_update_serializer.data)
-        return JsonResponse(employee_update_serializer.errors, status=400)
-    elif request.method == 'DELETE':
-        employee_id = request.query_params.get('id')
-        if not employee_id:
-            return JsonResponse({'error': 'Employee ID is required'}, status=400)
-
-        try:
-            employee_instance = Employee.objects.get(id=employee_id)
-        except Employee.DoesNotExist:
-            return JsonResponse({'error': 'Employee not found'}, status=404)
-
-        deleted_employee_id = employee_instance.id
-        employee_instance.delete()
-
-        response_data = {
-            'message': f'Employee with ID {deleted_employee_id} deleted successfully',
-            'deleted_employee_id': deleted_employee_id
-        }
-        return JsonResponse(response_data, status=204)
-
-
-
-# Example of using default milldleware(SessionMiddleware)
-def set_session(request):
-    request.session['user_id'] = 123
-    return HttpResponse("Session value set")
-
-def get_session(request):
-    user_id = request.session.get('user_id')
-    if user_id:
-        return HttpResponse(f"User ID from session: {user_id}")
-    else:
-        return HttpResponse("User ID not found in session")
+# from django.contrib.auth.forms import AuthenticationForm
+# from django.contrib.auth import authenticate, login
+# from django.shortcuts import render
+# from django.http import JsonResponse
+# from rest_framework.permissions import IsAuthenticated
 
 # function to send otp message
 def send_otp(request):
@@ -147,7 +37,6 @@ def send_otp(request):
         to='+918129110726'
     )
     return JsonResponse({'message': 'OTP sent successfully', 'otp': otp, 'message_sid': message.sid})
-
 
 @swagger_auto_schema(
     method='get',
@@ -226,7 +115,6 @@ def send_otp(request):
 )
 @api_view(['GET', 'POST', 'PATCH', 'DELETE'])
 @renderer_classes([ProductJSONRenderer])
-
 def products(request):
     if not request.user.is_authenticated or request.user.role.name != 'Seller':
         return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -248,7 +136,7 @@ def products(request):
                 products = products.order_by('-price')
 
         serializer = ProductSerializer(products, many=True)
-        return  Response({'data': serializer.data}, status=status.HTTP_200_OK)
+        return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
     elif request.method == 'POST':
         serializer = ProductSerializer(data=request.data, context={'request': request})
@@ -305,8 +193,43 @@ def get_all_products(request):
         return Response(serializer.data)
 
 
-
-@api_view(['GET'])
+@swagger_auto_schema(
+    method='post',
+    operation_description="Add item(s) to cart",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['product_id', 'quantity'],
+        properties={
+            'product_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the product to add to cart'),
+            'quantity': openapi.Schema(type=openapi.TYPE_INTEGER, description='Quantity of the product to add to cart'),
+        },
+    ),
+    responses={
+        status.HTTP_201_CREATED: 'Item(s) added to cart successfully',
+        status.HTTP_400_BAD_REQUEST: 'Bad request (e.g., missing required fields)',
+        status.HTTP_401_UNAUTHORIZED: 'Unauthorized: Authentication credentials were not provided',
+        status.HTTP_404_NOT_FOUND: 'Product not found',
+    }
+)
+@swagger_auto_schema(
+    method='delete',
+    operation_description="Delete a cart item by ID",
+    manual_parameters=[
+        openapi.Parameter(
+            name='id',
+            in_=openapi.IN_QUERY,
+            type=openapi.TYPE_INTEGER,
+            description='ID of the cart item to delete',
+            required=True,
+        ),
+    ],
+    responses={
+        status.HTTP_204_NO_CONTENT: 'Cart item deleted successfully',
+        status.HTTP_400_BAD_REQUEST: 'Bad request (e.g., missing ID)',
+        status.HTTP_404_NOT_FOUND: 'Cart item not found',
+    }
+)
+@api_view(['GET', 'POST', 'DELETE'])
 def cartlist(request):
     if not request.user.is_authenticated or request.user.role.name != 'Customer':
         return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -320,11 +243,134 @@ def cartlist(request):
         except Cart.DoesNotExist:
             return Response({'message': 'Cart not found'}, status=status.HTTP_404_NOT_FOUND)
 
+    elif request.method == 'POST':
+        product_id = request.data.get('product_id')
+        quantity = request.data.get('quantity')
+
+        if not product_id or not quantity:
+            return Response({'error': 'Product ID and quantity are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            product = Product.objects.get(pk=product_id)
+        except Product.DoesNotExist:
+            return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            customer_cart = Cart.objects.get(customer=request.user)
+        except Cart.DoesNotExist:
+            customer_cart = Cart.objects.create(customer=request.user)
+
+        try:
+            cart_item = CartItem.objects.get(cart=customer_cart, product=product)
+            cart_item.quantity += int(quantity)
+            cart_item.save()
+        except CartItem.DoesNotExist:
+            cart_item = CartItem.objects.create(cart=customer_cart, product=product, quantity=int(quantity))
+
+        serializer = CartItemSerializer(cart_item)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    elif request.method == 'DELETE':
+        cart_item_id = request.query_params.get('id')
+        if not cart_item_id:
+            return Response({'error': 'Cart item ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cart_item = CartItem.objects.get(pk=cart_item_id)
+            cart_item.delete()
+            return Response({'message': 'Cart item deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        except CartItem.DoesNotExist:
+            return Response({'error': 'Cart item not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['DELETE'])
+def delete_all_cartitems(request):
+    if not request.user.is_authenticated or request.user.role.name != 'Customer':
+        return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    if request.method == 'DELETE':
+        try:
+            customer_cart = Cart.objects.get(customer=request.user)
+            customer_cart.cartitem_set.all().delete()  # Delete related CartItem objects
+            customer_cart.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Cart.DoesNotExist:
+            return Response({'error': 'Cart not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+# payment using stripe
+import stripe
+from django.conf import settings
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+@csrf_exempt
+@api_view(['POST'])
+def create_checkout_session(request):
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[
+                {
+                    'price_data': {
+                        'currency': 'inr',
+                        'unit_amount': 1000,
+                        'product_data':{
+                            'name': 'name_of_demo_product'
+                        },
+
+                    },
+                    'quantity': 1,
+                }
+            ],
+            mode='payment',
+            success_url='http://localhost:8000/success/',
+            cancel_url='http://localhost:8000/cancel/',
+        )
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'sessionId': checkout_session.id})
 
 
 
 
 
+
+# @api_view(['POST'])
+# def payment_view(request):
+#     if not request.user.is_authenticated or request.user.role.name != 'Customer':
+#         return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+#     cart_items = CartItem.objects.filter(cart__customer=request.user)
+#     total_amount = sum(item.product.price * item.quantity for item in cart_items)
+#     amount_cents = int(total_amount * 100)
+#     token = request.data.get('stripeToken')
+#
+#     try:
+#         charge = stripe.Charge.create(
+#             amount=amount_cents,
+#             currency='inr',
+#             description='Payment',
+#             source=token,
+#         )
+#
+#         cart_items.delete()
+#
+#         return Response({'success': True, 'message': 'Payment successful'}, status=status.HTTP_200_OK)
+#
+#     except stripe.error.CardError as e:
+#         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+# hello world
+# @api_view(['GET'])
+# @csrf_exempt
+# @permission_classes([IsAuthenticated])
+# def hello_world(request):
+#     # request._logging_enabled = True
+#     return Response({'message': 'hai user'})
 
 
 # class CustomAuthenticationForm(AuthenticationForm):
@@ -345,3 +391,101 @@ def cartlist(request):
 #         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 #     else:
 #         return Response({'error': 'Method not allowed'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+# @swagger_auto_schema(
+#     method='post',
+#     operation_description="Add new employee",
+#     request_body=openapi.Schema(
+#         type=openapi.TYPE_OBJECT,
+#         required=['name', 'empid', 'designation', 'email'],
+#         properties={
+#             'name': openapi.Schema(type=openapi.TYPE_STRING, description='Employee name'),
+#             'empid': openapi.Schema(type=openapi.TYPE_STRING, description='Employee ID'),
+#             'designation': openapi.Schema(type=openapi.TYPE_INTEGER, description='Employee designation ID'),
+#             'phonenumber': openapi.Schema(type=openapi.TYPE_STRING, description='Employee phone number', nullable=True),
+#             'email': openapi.Schema(type=openapi.TYPE_STRING, description='Employee email'),
+#         }
+#     ),
+#     responses={201: openapi.Response("Employee added", EmployeeSerializer())}
+# )
+# @swagger_auto_schema(
+#     method='delete',
+#     operation_description="Delete an employee by ID",
+#     manual_parameters=[
+#         openapi.Parameter(
+#             name='id',
+#             in_=openapi.IN_QUERY,
+#             type=openapi.TYPE_INTEGER,
+#             description='ID of the employee to delete',
+#             required=True,
+#         ),
+#     ],
+#     responses={
+#         status.HTTP_204_NO_CONTENT: 'Employee deleted successfully',
+#         status.HTTP_400_BAD_REQUEST: 'Bad request (e.g., missing ID)',
+#         status.HTTP_404_NOT_FOUND: 'Employee not found',
+#     }
+# )
+# Inbuilt decorator use
+@csrf_exempt
+# @api_view(['GET', 'POST', 'DELETE'])
+@validate_required_fields(['name', 'empid', 'designation', 'email'])
+# @permission_classes([IsAuthenticated])
+@renderer_classes([CustomJSONRenderer])
+def employee_list(request):
+    if request.method == 'GET':
+        if not request.user.is_authenticated:
+            return Response({'message': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+        else:
+            employee_list = Employee.objects.all()
+            employee_list_serializer = EmployeeSerializer(employee_list, many=True)
+            return Response({'data': employee_list_serializer.data}, status=status.HTTP_200_OK)
+    elif request.method == 'POST':
+        employee_add_serializer = EmployeeSerializer(data=request.data)
+        if employee_add_serializer.is_valid():
+            employee_add_serializer.save()
+            return JsonResponse(employee_add_serializer.data, status=201)
+        return JsonResponse(employee_add_serializer.errors, status=400)
+    elif request.method == 'PUT':
+        try:
+            employee_instance = Employee.objects.get(id=request.data.get('id'))
+        except Employee.DoesNotExist:
+            return JsonResponse({'error': 'Employee not found'}, status=404)
+
+        employee_update_serializer = EmployeeSerializer(employee_instance, data=request.data)
+        if employee_update_serializer.is_valid():
+            employee_update_serializer.save()
+            return JsonResponse(employee_update_serializer.data)
+        return JsonResponse(employee_update_serializer.errors, status=400)
+    elif request.method == 'DELETE':
+        employee_id = request.query_params.get('id')
+        if not employee_id:
+            return JsonResponse({'error': 'Employee ID is required'}, status=400)
+
+        try:
+            employee_instance = Employee.objects.get(id=employee_id)
+        except Employee.DoesNotExist:
+            return JsonResponse({'error': 'Employee not found'}, status=404)
+
+        deleted_employee_id = employee_instance.id
+        employee_instance.delete()
+
+        response_data = {
+            'message': f'Employee with ID {deleted_employee_id} deleted successfully',
+            'deleted_employee_id': deleted_employee_id
+        }
+        return JsonResponse(response_data, status=204)
+
+
+# Example of using default milldleware(SessionMiddleware)
+def set_session(request):
+    request.session['user_id'] = 123
+    return HttpResponse("Session value set")
+
+def get_session(request):
+    user_id = request.session.get('user_id')
+    if user_id:
+        return HttpResponse(f"User ID from session: {user_id}")
+    else:
+        return HttpResponse("User ID not found in session")

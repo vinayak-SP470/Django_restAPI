@@ -11,7 +11,12 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 import os
 from pathlib import Path
+import environ
 
+env = environ.Env(
+    DEBUG=(bool, False)
+)
+environ.Env.read_env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,10 +25,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-mvf&8l$949&)4iy*)mcw9_bqc(w(w3fk)ci)2$7!57rndumsw7'
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = []
 
@@ -170,6 +175,11 @@ REST_FRAMEWORK = {
 }
 
 # twilio
+TWILIO_ACCOUNT_SID=env('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN=env('TWILIO_AUTH_TOKEN')
 
-TWILIO_ACCOUNT_SID = 'AC280b3c09f52e459c313696edd0fdd7d9'
-TWILIO_AUTH_TOKEN = '1f6f370a85299493267953dfdfff3604'
+#stripe
+STRIPE_PUBLIC_KEY=env('STRIPE_PUBLIC_KEY')
+STRIPE_SECRET_KEY=env('STRIPE_SECRET_KEY')
+STRIPE_WEBHOOK_SECRET=env('STRIPE_WEBHOOK_SECRET')
+
