@@ -1,5 +1,5 @@
 from .renderers import CustomJSONRenderer, ProductJSONRenderer
-from .serializers import EmployeeSerializer, ProductSerializer, CartItemSerializer
+from .serializers import EmployeeSerializer, ProductSerializer, CartItemSerializer, CustomUserSerializer
 from .models import Employee
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from drf_yasg.utils import swagger_auto_schema
@@ -301,7 +301,6 @@ def delete_all_cartitems(request):
 import stripe
 from django.conf import settings
 stripe.api_key = settings.STRIPE_SECRET_KEY
-
 @csrf_exempt
 @api_view(['POST'])
 def create_checkout_session(request):
@@ -330,9 +329,60 @@ def create_checkout_session(request):
 
     return JsonResponse({'sessionId': checkout_session.id})
 
+@csrf_exempt
+@api_view(['POST'])
+def handle_payment(request, session_id):
+    try:
+        # Retrieve the Checkout session using sessionId
+        checkout_session = stripe.checkout.Session.retrieve(session_id)
 
+        # If Checkout session is paid, handle successful payment
+        if checkout_session.payment_status == 'paid':
+            # Perform any actions you need after successful payment
+            return JsonResponse({'message': 'Payment successful'}, status=200)
+        else:
+            # Handle other payment statuses (e.g., incomplete, failed)
+            return JsonResponse({'message': 'Payment failed'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
+@api_view(['POST'])
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    try:
+        sig_header = request.headers['Stripe-Signature']
+    except KeyError:
+        # 'Stripe-Signature' header is missing
+        return HttpResponse("Stripe-Signature header is missing", status=400)
 
+    # Your webhook secret from the Stripe dashboard
+    endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, endpoint_secret
+        )
+    except ValueError as e:
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError as e:
+        return HttpResponse(status=400)
+
+    # Handle the event
+    if event['type'] == 'checkout.session.completed':
+        # Payment succeeded
+        payment_success(event)
+    elif event['type'] == 'invoice.payment_failed':
+        # Payment failed
+        payment_failed(event)
+
+    return HttpResponse(status=200)
+
+def payment_success(request):
+    return Response({'message': 'payment sucessfull'})
+
+def payment_failed(request):
+    return Response({'message': 'payment failed'})
 
 
 # @api_view(['POST'])
@@ -489,3 +539,31 @@ def get_session(request):
         return HttpResponse(f"User ID from session: {user_id}")
     else:
         return HttpResponse("User ID not found in session")
+
+@swagger_auto_schema(
+    method='post',
+    operation_description="Add new user",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['username', 'first_name', 'last_name', 'email', 'phone_number', 'role', 'password'],
+        properties={
+            'username': openapi.Schema(type=openapi.TYPE_STRING, description='Username'),
+            'first_name': openapi.Schema(type=openapi.TYPE_STRING, description='First name'),
+            'last_name': openapi.Schema(type=openapi.TYPE_STRING, description='Last name'),
+            'email': openapi.Schema(type=openapi.TYPE_STRING, description='Email address'),
+            'phone_number': openapi.Schema(type=openapi.TYPE_STRING, description='Phone number'),
+            'role': openapi.Schema(type=openapi.TYPE_INTEGER, description='Role'),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, description='Password'),
+        }
+    ),
+    responses={201: openapi.Response("User added", CustomUserSerializer())}
+)
+@api_view(['POST'])
+def add_user(request):
+    if request.method == 'POST':
+        serializer = CustomUserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            user.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

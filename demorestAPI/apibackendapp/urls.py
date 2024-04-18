@@ -1,5 +1,7 @@
 from django.urls import path
-from .views import employee_list, set_session, get_session,create_checkout_session, send_otp, products, get_all_products, cartlist, delete_all_cartitems
+from .views import (employee_list, set_session, get_session,stripe_webhook, create_checkout_session, add_user,
+                    handle_payment, send_otp, payment_success, payment_failed, products, get_all_products,
+                    cartlist, delete_all_cartitems)
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
@@ -16,6 +18,11 @@ urlpatterns = [
     path('delete-all/cartitems/', delete_all_cartitems, name='delete_all_cartitems'),
     # path('payment/', payment_view, name='payment'),
     path('create-checkout-session/', create_checkout_session, name='create_checkout_session'),
+    path('payment-success/', payment_success, name='payment_success'),
+    path('payment-cancel/', payment_failed, name='payment_failed'),
+    path('handle-payment/<str:session_id>/', handle_payment, name='handle_payment'),
+    path('webhookendpoint/', stripe_webhook, name='stripe_webhook'),
+    path('add-user/', add_user, name='add_user'),
 
 ]
 

@@ -183,3 +183,16 @@ STRIPE_PUBLIC_KEY=env('STRIPE_PUBLIC_KEY')
 STRIPE_SECRET_KEY=env('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET=env('STRIPE_WEBHOOK_SECRET')
 
+# Celery Configuration
+CELERY_BROKER_URL = 'amqp://guest:guest@localhost'
+CELERY_RESULT_BACKEND = 'db+postgresql://postgres:mynewpassword@localhost/my_demorestAPI_db'
+
+
+
+# Email configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'vinayak.r@spericorn.com'
+EMAIL_HOST_PASSWORD=env('EMAIL_HOST_PASSWORD')
