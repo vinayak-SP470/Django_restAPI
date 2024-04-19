@@ -4,9 +4,9 @@ from django.http import FileResponse
 def demo_middleware(get_response):
     def middleware(request):
         response = get_response(request)
-        print("hello")
+        print("before response")
         return response
-    print("hello")
+    print("after response")
     return middleware
 
 class APILogMiddleware(MiddlewareMixin):
